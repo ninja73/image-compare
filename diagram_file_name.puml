@@ -1,0 +1,452 @@
+@startuml
+namespace nquery {
+    class CustomFunc << (S,Aquamarine) >> {
+        + Func1 string
+        + Func2 string
+
+    }
+    class CustomMetric << (S,Aquamarine) >> {
+        - dateFilter dateFilter
+
+        + Setting Settings
+        + UserQuery string
+
+        - params(params []string, aliasPrefix string) ([]string, []string)
+        - expression(name string, metric Expression) (QueryBuilder, error)
+        - runningAggregate(name string, metric RunningAggregate) (QueryBuilder, error)
+        - aggregate(name string, metric AggregateMetric) (QueryBuilder, error)
+        - segmentation(name string, metric EventSegmentation) (string, error)
+        - toWhere(groups []string, allGroups <font color=blue>map</font>[string]CustomMetricWhere) ([]Where, error)
+
+        + Query(name string, metric <font color=blue>interface</font>{}) (string, error)
+
+    }
+    class DefaultResultParser << (S,Aquamarine) >> {
+        - x string
+        - groups []string
+        - metrics []Metric
+        - rows []common.JSONRaw
+        - resp *Result
+        - orderMetrics []int
+        - orderType string
+        - customMetric <font color=blue>map</font>[uint64]*SubCustomMetric
+
+        - parse() *Result
+
+    }
+    interface Filter  {
+        + Where() string
+
+    }
+    class FunnelResultParser << (S,Aquamarine) >> {
+        - rows []common.JSONRaw
+        - resp *Result
+        - alias []string
+        - steps int
+
+        - parse() *Result
+
+    }
+    class JoinQuery << (S,Aquamarine) >> {
+        - leftQuery string
+        - rightQuery string
+        - lAlias string
+        - rAlias string
+        - joinType string
+        - using string
+        - on string
+
+        + OrderBy(tpe OrderType, fields ...string) QueryBuilder
+        + Limit(limit string) QueryBuilder
+        + Where(settings Settings, setters ...WhereSetting) QueryBuilder
+        + CustomWhere(where string) QueryBuilder
+        + GroupBy(fields ...string) QueryBuilder
+        + Select(fields ...string) QueryBuilder
+        + Build() (string, error)
+
+    }
+    class Normalizer << (S,Aquamarine) >> {
+        - query Query
+        - setting Settings
+
+        - aggAliasParam() []string
+        - groupBy(params []string) []string
+        - xParam(params *[]string, param string, prefix string) 
+        - customMetricXParam(params *[]string, param string, prefix string) 
+        - getCustomMetric(column string) (*SubCustomMetric, bool)
+        - customMetricXParams(xs []string) []*SubCustomMetric
+        - xParams(xs []string, prefix string, param <font color=blue>func</font>(*[]string, string, string) ) []string
+        - customXParam(params *[]string, param string, _ string) 
+        - aggFields(ys []yParam, prefix string) []string
+        - aggParamFunc(param yParam, alias string) string
+        - aggCustomParam(customFunctions []yParam, aggParamFunc <font color=blue>func</font>(yParam, string) string) []string
+        - aggParams(params []yParam, aggParamFunc <font color=blue>func</font>(yParam, string) string) []string
+        - customFunctions(ys []yParam) []yParam
+        - baseFunc(params []yParam) []yParam
+        - userQuery(userYParams []yParam, userXParams []string) QueryBuilder
+        - installQuery(afParams []yParam, afXParams []string) QueryBuilder
+
+    }
+    interface Parser  {
+        - parse() *Result
+
+    }
+    class PipeResultParser << (S,Aquamarine) >> {
+        - groups []string
+        - current string
+        - metrics []Metric
+        - rows []common.JSONRaw
+        - resp *Result
+        - hasDrilldown bool
+        - customMetric <font color=blue>map</font>[uint64]*SubCustomMetric
+
+        - parse() *Result
+
+    }
+    interface QueryBuilder  {
+        + Select(fields ...string) QueryBuilder
+        + From( string) QueryBuilder
+        + Where(settings Settings, setters ...WhereSetting) QueryBuilder
+        + CustomWhere( string) QueryBuilder
+        + GroupBy( ...string) QueryBuilder
+        + OrderBy( OrderType,  ...string) QueryBuilder
+        + Limit( string) QueryBuilder
+        + Build() (string, error)
+
+    }
+    class QueryTool << (S,Aquamarine) >> {
+        - setting Settings
+
+        - joinQuery() (string, error)
+        - createSQLModeQuery() (string, error)
+        - createFunnelQuery() (QueryBuilder, error)
+        - singleMetricQuery(query Query) (QueryBuilder, error)
+        - createQuery(query Query) (QueryBuilder, error)
+
+        + SingleMetricConcatQueries(queries []queryTmp) (string, error)
+        + ConcatQueries(queries []queryTmp) (string, error)
+
+    }
+    class Settings << (S,Aquamarine) >> {
+        + Table string
+        + Apps []string
+        + AllApps <font color=blue>map</font>[string][]string
+        + Transform <font color=blue>map</font>[string]string
+        + CustomFunctions <font color=blue>map</font>[string]CustomFunc
+        + GlobalFrom utils.JSONLocalDate
+        + DefinedFilters <font color=blue>map</font>[int64][]Where
+        + EventsTypes []string
+        + CustomMetric <font color=blue>map</font>[uint64]*SubCustomMetric
+        + EventDateFilter dateFilter
+
+    }
+    class SingleMetricParser << (S,Aquamarine) >> {
+        - index string
+        - metrics []Metric
+        - rows []common.JSONRaw
+        - resp *Result
+
+        - parse() *Result
+
+    }
+    class TableResultParser << (S,Aquamarine) >> {
+        - groups []string
+        - current string
+        - metrics []Metric
+        - rows []common.JSONRaw
+        - resp *Result
+        - customMetric <font color=blue>map</font>[uint64]*SubCustomMetric
+
+        - parse() *Result
+
+    }
+    class UnionQuery << (S,Aquamarine) >> {
+        - lQuery string
+
+        + Build() (string, error)
+
+    }
+    class WhereSQL << (S,Aquamarine) >> {
+        - setting WhereSettings
+
+        - globalFilters(filterFieldNames <font color=blue>map</font>[string]Condition) ([]Filter, error)
+        - userFilter(userRules []Filter) (Filter, error)
+        - installFilter(installRules []Filter) (Filter, error)
+        - whereSQL(w Where) (Filter, error)
+
+        + SQL() (string, error)
+        + Filters(rules []Condition, prefix ...string) ([]Filter, error)
+
+    }
+    class WhereSettings << (S,Aquamarine) >> {
+        + Filters []Filter
+        + Wheres []Where
+        + GlobalFilter GlobalFilter
+
+    }
+    class Worker << (S,Aquamarine) >> {
+        - chClient *common.ClickhouseClient
+        - workers []<font color=blue>chan</font> *workerJob
+        - chUrls []string
+        - jobs sync.Map
+
+        - getQueue() (<font color=blue>chan</font> *workerJob, string)
+        - executeQuery(ctx context.Context, queryID string, queryCh string, isCached bool, user string) (*common.JSONRows, string, error)
+
+        + CancelQuery(queryID string) error
+        + Load(ctx context.Context, queryID string, qJSON QueryToolJSON, globalFilter GlobalFilter, isCached bool, user string, setters ...Setting) (*Result, error)
+        + GetQueueJobs() <font color=blue>map</font>[string]WorkerJobInfo
+        + RunCustomQuery(ctx context.Context, queryID string, query string, user string) (*common.JSONRows, error)
+
+    }
+    class customFilter << (S,Aquamarine) >> {
+        - values []string
+
+        + Where() string
+
+    }
+    class customMetricFilter << (S,Aquamarine) >> {
+        - column string
+        - values []string
+        - operator string
+        - settings Settings
+
+        + Where() string
+
+    }
+    class customQuery << (S,Aquamarine) >> {
+        - setting Settings
+
+        + Query(query Query) (QueryBuilder, error)
+
+    }
+    class dateFilter << (S,Aquamarine) >> {
+        - globalFrom utils.JSONLocalDate
+        - values []string
+
+        + Where() string
+
+    }
+    class defaultQuery << (S,Aquamarine) >> {
+        - setting Settings
+
+        - eventQuery(query Query, baseFunctions []yParam, group []string, fields []string) (QueryBuilder, error)
+        - joinMetric(eventQuery QueryBuilder, xParam *SubCustomMetric) (QueryBuilder, string, error)
+
+        + Query(query Query) (QueryBuilder, error)
+
+    }
+    class definedFilter << (S,Aquamarine) >> {
+        - values []string
+        - settings Settings
+
+        + Where() string
+
+    }
+    class eventTypeFilter << (S,Aquamarine) >> {
+        - values []string
+        - operator string
+
+        + Where() string
+
+    }
+    class funnelQuery << (S,Aquamarine) >> {
+        - setting Settings
+
+        - drilldown() (QueryBuilder, error)
+        - total() (QueryBuilder, error)
+        - eventQuery(query QueryBuilder, group []string, fields []string, metricXParams []*SubCustomMetric) (QueryBuilder, error)
+        - joinMetric(eventQuery QueryBuilder, xParam *SubCustomMetric) (QueryBuilder, string, error)
+
+        + Query() (QueryBuilder, error)
+
+    }
+    class installDateFilter << (S,Aquamarine) >> {
+        - globalFrom utils.JSONLocalDate
+        - values []string
+
+        + Where() string
+
+    }
+    class mjpEventTypeFilter << (S,Aquamarine) >> {
+        - values []string
+        - operator string
+
+        + Where() string
+
+    }
+    class mjpInstallDateFilter << (S,Aquamarine) >> {
+        - globalFrom utils.JSONLocalDate
+        - values []string
+
+        + Where() string
+
+    }
+    class nquery.OrderType << (T, #FF7700) >>  {
+    }
+    class nquery.Setting << (T, #FF7700) >>  {
+    }
+    class nquery.WhereSetting << (T, #FF7700) >>  {
+    }
+    class nquery.queryParams << (T, #FF7700) >>  {
+    }
+    class numberFilter << (S,Aquamarine) >> {
+        - values []string
+        - operator string
+
+        + Where() string
+
+    }
+    class segmentFilter << (S,Aquamarine) >> {
+        - values []string
+        - operator string
+
+        + Where() string
+
+    }
+    class selectQuery << (S,Aquamarine) >> {
+        - selectFields string
+        - table string
+        - where string
+        - group string
+        - order string
+        - limit string
+        - err error
+
+        + Select(fields ...string) QueryBuilder
+        + From(table string) QueryBuilder
+        + Where(settings Settings, setters ...WhereSetting) QueryBuilder
+        + CustomWhere(where string) QueryBuilder
+        + GroupBy(fields ...string) QueryBuilder
+        + OrderBy(tpe OrderType, fields ...string) QueryBuilder
+        + Limit(limit string) QueryBuilder
+        + Build() (string, error)
+
+    }
+    class singleMetricQuery << (S,Aquamarine) >> {
+        - setting Settings
+
+        + Query(query Query) (QueryBuilder, error)
+
+    }
+    class sqlMod << (S,Aquamarine) >> {
+        - setting Settings
+
+        - queryPrintf(format string, params queryParams) string
+        - queryAliasPrintf(format string) string
+        - queryGlobalFilterPrintf(format string, globalFilter GlobalFilter) string
+        - queryAppsPrintf(format string, apps <font color=blue>map</font>[string][]string) string
+
+        + Query() (string, error)
+
+    }
+    class stringFilter << (S,Aquamarine) >> {
+        - values []string
+        - operator string
+
+        + Where() string
+
+    }
+    class workerJob << (S,Aquamarine) >> {
+        - isValid() bool
+        - setValid(valid bool) 
+
+    }
+    class yParam << (S,Aquamarine) >> {
+        + FuncType string
+        + Arg string
+        + Index int
+        + CustomAlias string
+
+    }
+}
+"nquery.GlobalFilter" *-- "nquery.CustomMetric"
+"nquery.Normalizer" *-- "nquery.CustomMetric"
+"nquery.selectQuery" *-- "nquery.JoinQuery"
+"nquery.GlobalFilter" *-- "nquery.QueryTool"
+"nquery.QueryToolJSON" *-- "nquery.QueryTool"
+"nquery.selectQuery" *-- "nquery.UnionQuery"
+"nquery.Settings" *-- "nquery.WhereSettings"
+"nquery.GlobalFilter" *-- "nquery.customQuery"
+"nquery.Normalizer" *-- "nquery.customQuery"
+"nquery.QueryToolJSON" *-- "nquery.customQuery"
+"nquery.GlobalFilter" *-- "nquery.defaultQuery"
+"nquery.Normalizer" *-- "nquery.defaultQuery"
+"nquery.QueryToolJSON" *-- "nquery.defaultQuery"
+"nquery.GlobalFilter" *-- "nquery.funnelQuery"
+"nquery.Normalizer" *-- "nquery.funnelQuery"
+"nquery.QueryToolJSON" *-- "nquery.funnelQuery"
+"nquery.GlobalFilter" *-- "nquery.singleMetricQuery"
+"nquery.Normalizer" *-- "nquery.singleMetricQuery"
+"nquery.QueryToolJSON" *-- "nquery.singleMetricQuery"
+"nquery.GlobalFilter" *-- "nquery.sqlMod"
+"nquery.Normalizer" *-- "nquery.sqlMod"
+"nquery.QueryToolJSON" *-- "nquery.sqlMod"
+
+"nquery.Parser" <|-- "nquery.DefaultResultParser"
+"nquery.Parser" <|-- "nquery.FunnelResultParser"
+"nquery.Parser" <|-- "nquery.PipeResultParser"
+"nquery.Parser" <|-- "nquery.SingleMetricParser"
+"nquery.Parser" <|-- "nquery.TableResultParser"
+"nquery.Filter" <|-- "nquery.customFilter"
+"nquery.Filter" <|-- "nquery.customMetricFilter"
+"nquery.Filter" <|-- "nquery.dateFilter"
+"nquery.Filter" <|-- "nquery.definedFilter"
+"nquery.Filter" <|-- "nquery.eventTypeFilter"
+"nquery.Filter" <|-- "nquery.installDateFilter"
+"nquery.Filter" <|-- "nquery.mjpEventTypeFilter"
+"nquery.Filter" <|-- "nquery.mjpInstallDateFilter"
+"nquery.Filter" <|-- "nquery.numberFilter"
+"nquery.Filter" <|-- "nquery.segmentFilter"
+"nquery.QueryBuilder" <|-- "nquery.selectQuery"
+"nquery.Filter" <|-- "nquery.stringFilter"
+
+namespace query {
+    class Handler << (S,Aquamarine) >> {
+        + AppService model.AppService
+        + QueryService model.QueryService
+        + QueryFiltersService model.QueryFilterService
+        + DashboardService model.DashboardService
+        + CustomMetricService model.CustomMetricService
+        + ChClient *common.ClickhouseClient
+        + QueryWorker *nquery.Worker
+        + MPuzzleQueryWorker *nquery.Worker
+
+        - allApps() (<font color=blue>map</font>[string][]string, error)
+        - dashboardAppendQuery(queryID uint64, name string, dashboards []uint64, session *common.Account) 
+        - oldDashboards(queryID uint64) (<font color=blue>map</font>[uint64]bool, error)
+        - removeFromDashboards(queryID uint64, newDashboards []uint64, session *common.Account) ([]uint64, error)
+        - definedFilters(appName string) (<font color=blue>map</font>[int64][]nquery.Where, error)
+        - loadMetric(id uint64) (*nquery.SubCustomMetric, error)
+        - loadSubMetrics(metrics []string) ([]nquery.SubCustomMetric, error)
+        - transformParam(g string) string
+        - transformQuery(q nquery.QueryToolJSON) (nquery.QueryToolJSON, bool)
+
+        + GetByApp(c *gin.Context) 
+        + QueryQueue(c *gin.Context) 
+        + KillQuery(c *gin.Context) 
+        + Preview(c *gin.Context) 
+        + LoadData(c *gin.Context) 
+        + Get(c *gin.Context) 
+        + Create(c *gin.Context) 
+        + Update(c *gin.Context) 
+        + Delete(c *gin.Context) 
+
+    }
+    class KillQuery << (S,Aquamarine) >> {
+        + QueryID string
+        + TableName string
+
+    }
+    class ReqQuery << (S,Aquamarine) >> {
+        + ToQuery(appID uint64) *model.Query
+
+    }
+}
+
+
+"__builtin__.int" #.. "nquery.OrderType"
+"nquery.<font color=blue>func</font>(*Settings) " #.. "nquery.Setting"
+"nquery.<font color=blue>func</font>(*WhereSettings) " #.. "nquery.WhereSetting"
+"nquery.<font color=blue>map</font>[string]<font color=blue>interface</font>{}" #.. "nquery.queryParams"
+@enduml
